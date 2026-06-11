@@ -184,10 +184,48 @@ const readme = (
     <Section title="Core model">
       <List>
         <Item><Bold>Transport:</Bold> stdin/stdout/stderr, normal Unix pipes, and background processes.</Item>
-        <Item><Bold>Framing:</Bold> v0 primitives operate on line records unless a task says otherwise.</Item>
+        <Item><Bold>Framing:</Bold> v0 primitives operate on line records unless a task says otherwise, including a final record without a trailing newline.</Item>
         <Item><Bold>Encoding:</Bold> unrestricted by default; text and JSON helpers are optional layers.</Item>
+        <Item><Bold>Commands:</Bold> command arguments are explicit shell snippets run by Bash, so quote them like any other shell code.</Item>
+        <Item><Bold>State:</Bold> background runs live under <Code>$WF_STATE_HOME</Code> when set, otherwise <Code>$XDG_STATE_HOME/wf</Code> or <Code>~/.local/state/wf</Code>.</Item>
         <Item><Bold>Tasks:</Bold> every node is a Bash script under <Code>.mise/tasks</Code>.</Item>
       </List>
+    </Section>
+
+    <Section title="Workflow graph patterns">
+      <Paragraph>
+        {"Some nodes are "}
+        <Bold>sources</Bold>
+        {" and do not consume stdin. For example, "}
+        <Code>wf emit alpha beta gamma | wf tick</Code>
+        {" prints ticks forever by default; the emitted words are not part of the downstream flow. For large or short-lived combinations, piping into a source can block or trip SIGPIPE because nothing drains the pipe."}
+      </Paragraph>
+
+      <Paragraph>
+        {"Fan-out sends one stream to multiple branches; fan-in merges multiple source commands into one stream. Concurrent fan-in has intentionally nondeterministic ordering, so tests should sort or otherwise normalize when order is not part of the contract."}
+      </Paragraph>
+
+      <CodeBlock lang="bash">{`wf fanin merge \\
+  'wf tick --count 3 every 0s | sed "s/^/tick:/"' \\
+  'wf emit alpha beta | sed "s/^/word:/"' \\
+  | wf fanout tee --pass \\
+      'wf log append all.log --sink' \\
+  | wf text select '^tick:'`}</CodeBlock>
+
+      <Paragraph>
+        {"For larger workflows, prefer a small Bash script with named command strings/functions over a single unreadable one-liner."}
+      </Paragraph>
+    </Section>
+
+    <Section title="Tooling dependencies">
+      <Paragraph>
+        <Code>mise install</Code>
+        {" installs the project tools, including "}
+        <Code>jq</Code>
+        {" for "}
+        <Code>wf json</Code>
+        {" helpers. Core text, condition, flow, fanout, logging, and run primitives stay Bash/Unix-stream oriented."}
+      </Paragraph>
     </Section>
 
     <Section title="Quick start">
@@ -195,6 +233,7 @@ const readme = (
 mise install
 
 ./bin/wf help
+./bin/wf help tick
 ./bin/wf tick --count 5 every 0s`}</CodeBlock>
     </Section>
 
@@ -255,7 +294,7 @@ wf run stop demo`}</CodeBlock>
         <Item>Keep core primitives format-agnostic unless the namespace says otherwise.</Item>
         <Item>Prefer line-oriented tasks first; add stronger framing only when a real workflow needs it.</Item>
         <Item>Use <Code>$MISE_CONFIG_ROOT</Code> for repo-relative paths inside tasks.</Item>
-        <Item>Use <Code>$WF_CALLER_PWD</Code> when a task needs the directory where the user invoked <Code>wf</Code>.</Item>
+        <Item>Use <Code>$WF_CALLER_PWD</Code> when a task needs the directory where the user invoked <Code>wf</Code>; resolve user-facing relative file paths from there.</Item>
         <Item>Write tests through <Code>bin/wf</Code>, not by invoking task scripts directly.</Item>
       </List>
     </Section>
@@ -280,7 +319,7 @@ git diff --check`}</CodeBlock>
         {"The suite currently has "}
         <Bold>{`${testCount} tests`}</Bold>
         {", "}
-        <Bold>{`${tasks.length} public tasks`}</Bold>
+        <Bold>{`${tasks.length} executable tasks`}</Bold>
         {", and CI runs on "}
         <Bold>{oses.join(" + ") || "configured OSes"}</Bold>
         {"."}

@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 #MISE description="Forward line records at most once per duration"
+#USAGE example "wf tick --count 3 every 0s | wf flow throttle 1s" header="Throttle records"
 set -euo pipefail
 
 source "$MISE_CONFIG_ROOT/lib/wf.bash"
@@ -19,7 +20,7 @@ fi
 interval="$(wf_parse_duration "$*")"
 first=true
 
-while IFS= read -r line; do
+while IFS= read -r line || [ -n "$line" ]; do
   if $first; then
     first=false
   else

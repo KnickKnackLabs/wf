@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 #MISE description="Retry a line-oriented command for each input record"
+#USAGE example "wf emit job | wf retry --times 3 --sleep 0s -- 'sed s/^/ok:/'" header="Retry per record"
 set -euo pipefail
 
 source "$MISE_CONFIG_ROOT/lib/wf.bash"
@@ -49,7 +50,7 @@ done
 [ -n "$command_string" ] || wf_die "missing COMMAND"
 interval="$(wf_parse_duration "$sleep_for")"
 
-while IFS= read -r record; do
+while IFS= read -r record || [ -n "$record" ]; do
   attempt=1
   while true; do
     if wf_run_line_command "$command_string" "$record"; then

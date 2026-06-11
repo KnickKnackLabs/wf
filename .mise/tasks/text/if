@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 #MISE description="Route text lines through then/else commands using a regex"
+#USAGE example "wf emit 1 2 | wf text if '^[02468]$' --then 'sed s/^/even:/' --else 'sed s/^/odd:/'" header="Route text by regex"
 set -euo pipefail
 
 source "$MISE_CONFIG_ROOT/lib/wf.bash"
@@ -47,7 +48,7 @@ done
 [ -n "$pattern" ] || wf_die "missing REGEX"
 [ -n "$then_command" ] || wf_die "missing --then COMMAND"
 
-while IFS= read -r line; do
+while IFS= read -r line || [ -n "$line" ]; do
   if [[ "$line" =~ $pattern ]]; then
     wf_run_line_command "$then_command" "$line"
   elif [ -n "$else_command" ]; then

@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 #MISE description="Emit arguments as line records, or pass stdin through"
+#USAGE example "wf emit alpha beta gamma" header="Emit literal records"
 set -euo pipefail
 
 usage() {

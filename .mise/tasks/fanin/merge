@@ -1,0 +1,68 @@
+#!/usr/bin/env bash
+#MISE description="Merge stdout from multiple source commands"
+#USAGE example "wf fanin merge 'wf emit left' 'wf emit right'" header="Merge two source commands"
+set -euo pipefail
+
+source "$MISE_CONFIG_ROOT/lib/wf.bash"
+
+usage() {
+  cat <<'USAGE'
+Usage: wf fanin merge COMMAND...
+
+Runs each COMMAND concurrently and forwards their stdout into one merged stdout
+stream. Branch stderr is inherited. Output order is intentionally nondeterministic
+when commands run at the same time.
+
+Examples:
+  wf fanin merge 'wf emit left' 'wf emit right'
+  wf fanin merge \
+    'wf tick --count 3 every 0s | sed "s/^/tick:/"' \
+    'wf emit alpha beta | sed "s/^/word:/"'
+USAGE
+}
+
+commands=()
+
+while [ "$#" -gt 0 ]; do
+  case "$1" in
+    -h|--help)
+      usage
+      exit 0
+      ;;
+    *)
+      commands+=("$1")
+      shift
+      ;;
+  esac
+done
+
+[ "${#commands[@]}" -gt 0 ] || wf_die "usage: wf fanin merge COMMAND..."
+
+pids=()
+
+# shellcheck disable=SC2329 # invoked by the signal trap below
+terminate() {
+  local pid
+
+  for pid in "${pids[@]}"; do
+    if ! kill "$pid" >/dev/null 2>&1; then
+      continue
+    fi
+  done
+}
+
+trap 'terminate; exit 130' INT TERM
+
+for command_string in "${commands[@]}"; do
+  bash -lc "$command_string" &
+  pids+=("$!")
+done
+
+status=0
+for pid in "${pids[@]}"; do
+  if ! wait "$pid"; then
+    status=1
+  fi
+done
+
+exit "$status"

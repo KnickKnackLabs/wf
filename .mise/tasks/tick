@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 #MISE description="Emit periodic tick records"
+#USAGE example "wf tick --count 5 every 1s" header="Emit five ticks"
 set -euo pipefail
 
 source "$MISE_CONFIG_ROOT/lib/wf.bash"
@@ -52,7 +53,20 @@ if [ -n "$count" ] && ! [[ "$count" =~ ^[0-9]+$ ]]; then
   wf_die "--count must be a non-negative integer"
 fi
 
+case "$format" in
+  text|plain|json|kv)
+    ;;
+  *)
+    wf_die "unsupported tick format: $format"
+    ;;
+esac
+
 interval="$(wf_parse_duration "${duration_parts[*]:-1s}")"
+
+if [ "$count" = "0" ]; then
+  exit 0
+fi
+
 n=0
 
 while true; do

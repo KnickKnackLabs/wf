@@ -10,7 +10,7 @@ wf - small shell workflow primitives
 
 Usage:
   wf TASK [SUBTASK ...] [args]
-  wf help
+  wf help [TASK [SUBTASK ...]]
 
 Examples:
   wf tick --count 5 every 1s
@@ -27,6 +27,7 @@ if [ "$#" -eq 0 ] || [ "${1:-}" = "-h" ] || [ "${1:-}" = "--help" ]; then
   exit 0
 fi
 
+help_requested=false
 if [ "${1:-}" = "help" ]; then
   shift
   if [ "$#" -eq 0 ]; then
@@ -49,6 +50,7 @@ if [ "${1:-}" = "help" ]; then
     done | sort
     exit 0
   fi
+  help_requested=true
 fi
 
 match_count=0
@@ -88,6 +90,9 @@ for ((i = 0; i < match_count; i++)); do
   unset 'rest[i]'
 done
 rest=("${rest[@]}")
+if $help_requested; then
+  rest=("--help" "${rest[@]}")
+fi
 
 export WF_ROOT="$wf_root"
 export WF_CALLER_PWD="${WF_CALLER_PWD:-$PWD}"

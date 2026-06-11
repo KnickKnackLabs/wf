@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 #MISE description="Print logs for a named background workflow"
+#USAGE example "wf run logs --stdout demo" header="Show run logs"
 set -euo pipefail
 
 source "$MISE_CONFIG_ROOT/lib/wf.bash"

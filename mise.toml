@@ -9,6 +9,7 @@ shiv = "https://github.com/KnickKnackLabs/vfox-shiv"
 [tools]
 bats = "1.13.0"
 gum = "0.17.0"
+jq = "1.8.1"
 "shiv:codebase" = "0.3"
 "shiv:readme" = "0.3"
 

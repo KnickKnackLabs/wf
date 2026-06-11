@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 #MISE description="List named background workflows"
+#USAGE example "wf run ps" header="List runs"
 set -euo pipefail
 
 source "$MISE_CONFIG_ROOT/lib/wf.bash"

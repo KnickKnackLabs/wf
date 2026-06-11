@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 #MISE description="Sleep before forwarding each line record"
+#USAGE example "wf emit a b | wf flow delay 100ms" header="Delay each record"
 set -euo pipefail
 
 source "$MISE_CONFIG_ROOT/lib/wf.bash"
@@ -18,7 +19,7 @@ fi
 [ "$#" -ge 1 ] || wf_die "usage: wf flow delay DURATION"
 interval="$(wf_parse_duration "$*")"
 
-while IFS= read -r line; do
+while IFS= read -r line || [ -n "$line" ]; do
   sleep "$interval"
   printf '%s\n' "$line"
 done

@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 #MISE description="Drop text lines matching a Bash regular expression"
+#USAGE example "wf emit alpha beta | wf text reject '^b'" header="Drop text matching regex"
 set -euo pipefail
 
 source "$MISE_CONFIG_ROOT/lib/wf.bash"
@@ -20,7 +21,7 @@ fi
 [ "$#" -eq 1 ] || wf_die "usage: wf text reject REGEX"
 pattern="$1"
 
-while IFS= read -r line; do
+while IFS= read -r line || [ -n "$line" ]; do
   if ! [[ "$line" =~ $pattern ]]; then
     printf '%s\n' "$line"
   fi

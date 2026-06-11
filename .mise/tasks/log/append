@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 #MISE description="Append line records to a file and pass them through"
+#USAGE example "wf emit a b | wf log append events.log" header="Append and pass through"
 set -euo pipefail
 
 source "$MISE_CONFIG_ROOT/lib/wf.bash"
@@ -38,9 +39,10 @@ while [ "$#" -gt 0 ]; do
 done
 
 [ -n "$file" ] || wf_die "usage: wf log append FILE [--sink]"
+file="$(wf_caller_path "$file")"
 mkdir -p "$(dirname "$file")"
 
-while IFS= read -r line; do
+while IFS= read -r line || [ -n "$line" ]; do
   printf '%s\n' "$line" >> "$file"
   if ! $sink; then
     printf '%s\n' "$line"

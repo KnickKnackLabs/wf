@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 #MISE description="Check disk usage for a mount and emit text, kv, or JSON records"
+#USAGE example "wf check disk / --once --format json" header="Check disk once"
 set -euo pipefail
 
 source "$MISE_CONFIG_ROOT/lib/wf.bash"
@@ -75,7 +76,7 @@ emit_check() {
 if $once; then
   emit_check ""
 else
-  while IFS= read -r trigger; do
+  while IFS= read -r trigger || [ -n "$trigger" ]; do
     emit_check "$trigger"
   done
 fi

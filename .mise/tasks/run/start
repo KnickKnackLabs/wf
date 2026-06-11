@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 #MISE description="Start a named workflow in the background"
+#USAGE example "wf run start demo -- 'wf tick every 5s | wf log pretty'" header="Start a background workflow"
 set -euo pipefail
 
 source "$MISE_CONFIG_ROOT/lib/wf.bash"
@@ -9,7 +10,7 @@ usage() {
 Usage: wf run start NAME -- WORKFLOW
 
 WORKFLOW is a shell snippet. Logs and pid files live under:
-  ${XDG_STATE_HOME:-~/.local/state}/wf/runs/NAME/
+  ${WF_STATE_HOME:-${XDG_STATE_HOME:-~/.local/state}/wf}/runs/NAME/
 
 Example:
   wf run start demo -- 'wf tick --count 3 every 1s | wf log pretty'
@@ -47,13 +48,16 @@ if [ -f "$pid_file" ]; then
   fi
 fi
 
+quoted_root="$(printf '%q' "$MISE_CONFIG_ROOT")"
+quoted_caller_pwd="$(printf '%q' "${WF_CALLER_PWD:-$PWD}")"
+
 cat > "$workflow_file" <<EOF
 #!/usr/bin/env bash
 set -euo pipefail
-export PATH="$MISE_CONFIG_ROOT/bin:\$PATH"
-export WF_ROOT="$MISE_CONFIG_ROOT"
-export WF_CALLER_PWD="${WF_CALLER_PWD:-$PWD}"
-cd "${WF_CALLER_PWD:-$PWD}"
+export WF_ROOT=$quoted_root
+export WF_CALLER_PWD=$quoted_caller_pwd
+export PATH=$quoted_root/bin:\$PATH
+cd "\$WF_CALLER_PWD"
 $workflow
 EOF
 chmod +x "$workflow_file"

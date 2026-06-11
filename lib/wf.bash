@@ -64,6 +64,19 @@ wf_parse_duration() {
   esac
 }
 
+wf_caller_path() {
+  local path="$1"
+
+  case "$path" in
+    /*)
+      printf '%s' "$path"
+      ;;
+    *)
+      printf '%s/%s' "${WF_CALLER_PWD:-$PWD}" "$path"
+      ;;
+  esac
+}
+
 wf_run_line_command() {
   local command_string="$1"
   local record="$2"
@@ -78,8 +91,36 @@ wf_test_line_command() {
   WF_RECORD="$record" bash -lc "$command_string" >/dev/null <<< "$record"
 }
 
+wf_jq_predicate() {
+  local filter="$1"
+  local json="$2"
+  local status
+
+  if ! jq -c . >/dev/null <<< "$json"; then
+    wf_die "invalid JSON record"
+  fi
+
+  if jq -e "$filter" >/dev/null <<< "$json"; then
+    return 0
+  else
+    status="$?"
+  fi
+  case "$status" in
+    1|4)
+      return 1
+      ;;
+    *)
+      wf_die "jq predicate failed with status $status: $filter"
+      ;;
+  esac
+}
+
 wf_state_home() {
-  printf '%s/wf' "${XDG_STATE_HOME:-$HOME/.local/state}"
+  if [ -n "${WF_STATE_HOME:-}" ]; then
+    printf '%s' "$WF_STATE_HOME"
+  else
+    printf '%s/wf' "${XDG_STATE_HOME:-$HOME/.local/state}"
+  fi
 }
 
 wf_run_home() {
@@ -95,4 +136,44 @@ wf_is_pid_running() {
   local pid="$1"
   [ -n "$pid" ] || return 1
   kill -0 "$pid" >/dev/null 2>&1
+}
+
+wf_descendant_pids() {
+  local root="$1"
+
+  ps -eo pid=,ppid= | awk -v root="$root" '
+    { pid[NR] = $1; ppid[NR] = $2 }
+    END {
+      found[root] = 1
+      changed = 1
+      while (changed) {
+        changed = 0
+        for (i = 1; i <= NR; i++) {
+          if (found[ppid[i]] && !found[pid[i]]) {
+            found[pid[i]] = 1
+            order[++n] = pid[i]
+            changed = 1
+          }
+        }
+      }
+      for (i = n; i >= 1; i--) print order[i]
+    }
+  '
+}
+
+wf_kill_process_tree() {
+  local root="$1"
+  local signal="${2:-TERM}"
+  local child
+
+  while IFS= read -r child; do
+    [ -n "$child" ] || continue
+    if ! kill "-$signal" "$child" >/dev/null 2>&1; then
+      continue
+    fi
+  done < <(wf_descendant_pids "$root")
+
+  if ! kill "-$signal" "$root" >/dev/null 2>&1; then
+    return 0
+  fi
 }

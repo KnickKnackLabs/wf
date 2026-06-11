@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 #MISE description="Check local development setup"
+#USAGE example "mise run doctor" header="Check local setup"
 set -euo pipefail
 
 REPO_DIR="$MISE_CONFIG_ROOT"

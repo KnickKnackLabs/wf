@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 #MISE description="Stop a named background workflow"
+#USAGE example "wf run stop demo" header="Stop a background workflow"
 set -euo pipefail
 
 source "$MISE_CONFIG_ROOT/lib/wf.bash"
@@ -29,9 +30,7 @@ if ! wf_is_pid_running "$pid"; then
   exit 0
 fi
 
-if ! kill "$pid" >/dev/null 2>&1; then
-  printf 'warning: failed to send TERM to pid=%s\n' "$pid" >&2
-fi
+wf_kill_process_tree "$pid" TERM
 for _ in 1 2 3 4 5; do
   if ! wf_is_pid_running "$pid"; then
     printf '%s stopped pid=%s\n' "$name" "$pid"
@@ -40,7 +39,5 @@ for _ in 1 2 3 4 5; do
   sleep 1
 done
 
-if ! kill -KILL "$pid" >/dev/null 2>&1; then
-  printf 'warning: failed to send KILL to pid=%s\n' "$pid" >&2
-fi
+wf_kill_process_tree "$pid" KILL
 printf '%s killed pid=%s\n' "$name" "$pid"

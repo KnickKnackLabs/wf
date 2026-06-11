@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 #MISE description="Route line records through then/else commands using a predicate command"
+#USAGE example "wf emit 1 2 | wf cond if 'grep -q 2' --then 'sed s/^/two:/' --else cat" header="Route by predicate command"
 set -euo pipefail
 
 source "$MISE_CONFIG_ROOT/lib/wf.bash"
@@ -66,7 +67,7 @@ done
 [ -n "$predicate" ] || wf_die "missing --pred COMMAND"
 [ -n "$then_command" ] || wf_die "missing --then COMMAND"
 
-while IFS= read -r record; do
+while IFS= read -r record || [ -n "$record" ]; do
   if wf_test_line_command "$predicate" "$record"; then
     wf_run_line_command "$then_command" "$record"
   elif [ -n "$else_command" ]; then

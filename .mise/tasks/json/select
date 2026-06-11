@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 #MISE description="Keep JSONL records matching a jq predicate"
+#USAGE example "wf tick --count 3 --format json every 0s | wf json select '.n >= 2'" header="Keep JSON records"
 set -euo pipefail
 
 source "$MISE_CONFIG_ROOT/lib/wf.bash"
@@ -21,8 +22,8 @@ fi
 [ "$#" -eq 1 ] || wf_die "usage: wf json select JQ_FILTER"
 filter="$1"
 
-while IFS= read -r json; do
-  if jq -e "$filter" >/dev/null <<< "$json"; then
+while IFS= read -r json || [ -n "$json" ]; do
+  if wf_jq_predicate "$filter" "$json"; then
     printf '%s\n' "$json"
   fi
 done

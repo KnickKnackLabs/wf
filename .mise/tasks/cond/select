@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 #MISE description="Keep line records whose predicate command exits successfully"
+#USAGE example "wf emit 1 2 3 | wf cond select 'awk \"{ exit !(\\$1 > 1) }\"'" header="Keep records matching a predicate"
 set -euo pipefail
 
 source "$MISE_CONFIG_ROOT/lib/wf.bash"
@@ -39,7 +40,7 @@ done
 
 [ -n "$predicate" ] || wf_die "missing predicate COMMAND"
 
-while IFS= read -r record; do
+while IFS= read -r record || [ -n "$record" ]; do
   if wf_test_line_command "$predicate" "$record"; then
     matched=true
   else

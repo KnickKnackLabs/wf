@@ -7,8 +7,8 @@
 Route, branch, fan out, log, and supervise Unix pipelines without forcing a data format.
 
 ![shape: mise tasks + Bash](https://img.shields.io/badge/shape-mise%20tasks%20%2B%20Bash-4EAA25?style=flat&logo=gnubash&logoColor=white)
-[![tests: 5](https://img.shields.io/badge/tests-5-brightgreen?style=flat)](test/)
-[![tasks: 30](https://img.shields.io/badge/tasks-30-blue?style=flat)](.mise/tasks/)
+[![tests: 23](https://img.shields.io/badge/tests-23-brightgreen?style=flat)](test/)
+[![tasks: 31](https://img.shields.io/badge/tasks-31-blue?style=flat)](.mise/tasks/)
 ![README: TSX](https://img.shields.io/badge/README-TSX-f472b6?style=flat)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue?style=flat)](LICENSE)
 
@@ -25,9 +25,32 @@ The core does **not** require JSON, CSV, or any other data format. It treats std
 ## Core model
 
 - **Transport:** stdin/stdout/stderr, normal Unix pipes, and background processes.
-- **Framing:** v0 primitives operate on line records unless a task says otherwise.
+- **Framing:** v0 primitives operate on line records unless a task says otherwise, including a final record without a trailing newline.
 - **Encoding:** unrestricted by default; text and JSON helpers are optional layers.
+- **Commands:** command arguments are explicit shell snippets run by Bash, so quote them like any other shell code.
+- **State:** background runs live under `$WF_STATE_HOME` when set, otherwise `$XDG_STATE_HOME/wf` or `~/.local/state/wf`.
 - **Tasks:** every node is a Bash script under `.mise/tasks`.
+
+## Workflow graph patterns
+
+Some nodes are **sources** and do not consume stdin. For example, `wf emit alpha beta gamma | wf tick` prints ticks forever by default; the emitted words are not part of the downstream flow. For large or short-lived combinations, piping into a source can block or trip SIGPIPE because nothing drains the pipe.
+
+Fan-out sends one stream to multiple branches; fan-in merges multiple source commands into one stream. Concurrent fan-in has intentionally nondeterministic ordering, so tests should sort or otherwise normalize when order is not part of the contract.
+
+```bash
+wf fanin merge \
+  'wf tick --count 3 every 0s | sed "s/^/tick:/"' \
+  'wf emit alpha beta | sed "s/^/word:/"' \
+  | wf fanout tee --pass \
+      'wf log append all.log --sink' \
+  | wf text select '^tick:'
+```
+
+For larger workflows, prefer a small Bash script with named command strings/functions over a single unreadable one-liner.
+
+## Tooling dependencies
+
+`mise install` installs the project tools, including `jq` for `wf json` helpers. Core text, condition, flow, fanout, logging, and run primitives stay Bash/Unix-stream oriented.
 
 ## Quick start
 
@@ -36,6 +59,7 @@ mise trust
 mise install
 
 ./bin/wf help
+./bin/wf help tick
 ./bin/wf tick --count 5 every 0s
 ```
 
@@ -95,6 +119,7 @@ wf run stop demo
 | `wf cond select`   | Keep line records whose predicate command exits successfully             |
 | `wf doctor`        | Check local development setup                                            |
 | `wf emit`          | Emit arguments as line records, or pass stdin through                    |
+| `wf fanin merge`   | Merge stdout from multiple source commands                               |
 | `wf fanout tee`    | Broadcast line records to multiple branch commands                       |
 | `wf flow delay`    | Sleep before forwarding each line record                                 |
 | `wf flow drop`     | Drop the first N line records                                            |
@@ -124,7 +149,7 @@ wf run stop demo
 1. Keep core primitives format-agnostic unless the namespace says otherwise.
 2. Prefer line-oriented tasks first; add stronger framing only when a real workflow needs it.
 3. Use `$MISE_CONFIG_ROOT` for repo-relative paths inside tasks.
-4. Use `$WF_CALLER_PWD` when a task needs the directory where the user invoked `wf`.
+4. Use `$WF_CALLER_PWD` when a task needs the directory where the user invoked `wf`; resolve user-facing relative file paths from there.
 5. Write tests through `bin/wf`, not by invoking task scripts directly.
 
 <details>
@@ -155,7 +180,7 @@ readme build --check
 git diff --check
 ```
 
-The suite currently has **5 tests**, **30 public tasks**, and CI runs on **ubuntu-latest + macos-latest**.
+The suite currently has **23 tests**, **31 executable tasks**, and CI runs on **ubuntu-latest + macos-latest**.
 
 <div align="center">
 
