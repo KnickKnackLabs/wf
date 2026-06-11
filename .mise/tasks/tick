@@ -1,0 +1,82 @@
+#!/usr/bin/env bash
+#MISE description="Emit periodic tick records"
+set -euo pipefail
+
+source "$MISE_CONFIG_ROOT/lib/wf.bash"
+
+usage() {
+  cat <<'USAGE'
+Usage: wf tick [--count N] [--format text|json|kv] [every] DURATION
+
+Examples:
+  wf tick --count 5 every 1s
+  wf tick --format json every 5 seconds
+USAGE
+}
+
+count=""
+format="text"
+duration_parts=()
+
+while [ "$#" -gt 0 ]; do
+  case "$1" in
+    -h|--help)
+      usage
+      exit 0
+      ;;
+    -n|--count)
+      [ "$#" -ge 2 ] || wf_die "--count requires a value"
+      count="$2"
+      shift 2
+      ;;
+    --format)
+      [ "$#" -ge 2 ] || wf_die "--format requires a value"
+      format="$2"
+      shift 2
+      ;;
+    --json)
+      format="json"
+      shift
+      ;;
+    every)
+      shift
+      ;;
+    *)
+      duration_parts+=("$1")
+      shift
+      ;;
+  esac
+done
+
+if [ -n "$count" ] && ! [[ "$count" =~ ^[0-9]+$ ]]; then
+  wf_die "--count must be a non-negative integer"
+fi
+
+interval="$(wf_parse_duration "${duration_parts[*]:-1s}")"
+n=0
+
+while true; do
+  n=$((n + 1))
+  ts="$(wf_now_utc)"
+
+  case "$format" in
+    text|plain)
+      printf '%s\n' "$n"
+      ;;
+    json)
+      printf '{"type":"tick","n":%d,"ts":"%s"}\n' "$n" "$ts"
+      ;;
+    kv)
+      printf 'type=tick n=%d ts=%s\n' "$n" "$ts"
+      ;;
+    *)
+      wf_die "unsupported tick format: $format"
+      ;;
+  esac
+
+  if [ -n "$count" ] && [ "$n" -ge "$count" ]; then
+    break
+  fi
+
+  sleep "$interval"
+done

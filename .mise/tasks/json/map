@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+#MISE description="Transform JSONL records with jq -c"
+set -euo pipefail
+
+source "$MISE_CONFIG_ROOT/lib/wf.bash"
+wf_require_command jq
+
+usage() {
+  cat <<'USAGE'
+Usage: wf json map JQ_FILTER
+
+Applies jq -c JQ_FILTER to each JSON line.
+USAGE
+}
+
+if [ "${1:-}" = "-h" ] || [ "${1:-}" = "--help" ]; then
+  usage
+  exit 0
+fi
+
+[ "$#" -eq 1 ] || wf_die "usage: wf json map JQ_FILTER"
+filter="$1"
+
+while IFS= read -r json; do
+  jq -c "$filter" <<< "$json"
+done

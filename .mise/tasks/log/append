@@ -1,0 +1,48 @@
+#!/usr/bin/env bash
+#MISE description="Append line records to a file and pass them through"
+set -euo pipefail
+
+source "$MISE_CONFIG_ROOT/lib/wf.bash"
+
+usage() {
+  cat <<'USAGE'
+Usage: wf log append FILE [--sink]
+
+By default this behaves like tee -a: records are appended to FILE and forwarded
+to stdout. Use --sink to suppress stdout.
+USAGE
+}
+
+sink=false
+file=""
+
+while [ "$#" -gt 0 ]; do
+  case "$1" in
+    -h|--help)
+      usage
+      exit 0
+      ;;
+    --sink)
+      sink=true
+      shift
+      ;;
+    *)
+      if [ -z "$file" ]; then
+        file="$1"
+        shift
+      else
+        wf_die "unexpected argument: $1"
+      fi
+      ;;
+  esac
+done
+
+[ -n "$file" ] || wf_die "usage: wf log append FILE [--sink]"
+mkdir -p "$(dirname "$file")"
+
+while IFS= read -r line; do
+  printf '%s\n' "$line" >> "$file"
+  if ! $sink; then
+    printf '%s\n' "$line"
+  fi
+done

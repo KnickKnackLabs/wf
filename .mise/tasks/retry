@@ -1,0 +1,66 @@
+#!/usr/bin/env bash
+#MISE description="Retry a line-oriented command for each input record"
+set -euo pipefail
+
+source "$MISE_CONFIG_ROOT/lib/wf.bash"
+
+usage() {
+  cat <<'USAGE'
+Usage: wf retry [--times N] [--sleep DURATION] -- COMMAND
+
+For each input line, COMMAND receives the line on stdin and in $WF_RECORD. If it
+fails, wf retries up to N times before exiting non-zero.
+USAGE
+}
+
+times=3
+sleep_for="1s"
+command_string=""
+
+while [ "$#" -gt 0 ]; do
+  case "$1" in
+    -h|--help)
+      usage
+      exit 0
+      ;;
+    --times|-n)
+      [ "$#" -ge 2 ] || wf_die "--times requires a value"
+      times="$2"
+      shift 2
+      ;;
+    --sleep)
+      [ "$#" -ge 2 ] || wf_die "--sleep requires a value"
+      sleep_for="$2"
+      shift 2
+      ;;
+    --)
+      shift
+      command_string="$*"
+      break
+      ;;
+    *)
+      command_string="$*"
+      break
+      ;;
+  esac
+done
+
+[[ "$times" =~ ^[1-9][0-9]*$ ]] || wf_die "--times must be a positive integer"
+[ -n "$command_string" ] || wf_die "missing COMMAND"
+interval="$(wf_parse_duration "$sleep_for")"
+
+while IFS= read -r record; do
+  attempt=1
+  while true; do
+    if wf_run_line_command "$command_string" "$record"; then
+      break
+    fi
+
+    if [ "$attempt" -ge "$times" ]; then
+      wf_die "command failed after $times attempts: $command_string"
+    fi
+
+    attempt=$((attempt + 1))
+    sleep "$interval"
+  done
+done

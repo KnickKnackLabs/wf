@@ -1,0 +1,81 @@
+#!/usr/bin/env bash
+#MISE description="Check disk usage for a mount and emit text, kv, or JSON records"
+set -euo pipefail
+
+source "$MISE_CONFIG_ROOT/lib/wf.bash"
+
+usage() {
+  cat <<'USAGE'
+Usage: wf check disk [MOUNT] [--format text|kv|json] [--once]
+
+When stdin provides trigger lines, one disk check is emitted per trigger. Use
+--once to run exactly once without consuming stdin.
+USAGE
+}
+
+mount="/"
+format="kv"
+once=false
+
+while [ "$#" -gt 0 ]; do
+  case "$1" in
+    -h|--help)
+      usage
+      exit 0
+      ;;
+    --format)
+      [ "$#" -ge 2 ] || wf_die "--format requires a value"
+      format="$2"
+      shift 2
+      ;;
+    --json)
+      format="json"
+      shift
+      ;;
+    --once)
+      once=true
+      shift
+      ;;
+    *)
+      mount="$1"
+      shift
+      ;;
+  esac
+done
+
+emit_check() {
+  local trigger="$1"
+  local line size used available pct mounted_on ts escaped_mount escaped_trigger
+
+  line="$(df -P "$mount" | awk 'NR == 2 { gsub("%", "", $5); print $2, $3, $4, $5, $6 }')"
+  [ -n "$line" ] || wf_die "could not read df output for mount: $mount"
+  read -r size used available pct mounted_on <<< "$line"
+  ts="$(wf_now_utc)"
+
+  case "$format" in
+    text|plain)
+      printf 'disk %s used=%s%% available_kb=%s\n' "$mounted_on" "$pct" "$available"
+      ;;
+    kv)
+      printf 'type=disk_check mount=%s used_pct=%s size_kb=%s used_kb=%s available_kb=%s ts=%s\n' \
+        "$mounted_on" "$pct" "$size" "$used" "$available" "$ts"
+      ;;
+    json)
+      escaped_mount="$(wf_json_escape "$mounted_on")"
+      escaped_trigger="$(wf_json_escape "$trigger")"
+      printf '{"type":"disk_check","mount":"%s","disk":{"used_pct":%s,"size_kb":%s,"used_kb":%s,"available_kb":%s},"trigger":"%s","ts":"%s"}\n' \
+        "$escaped_mount" "$pct" "$size" "$used" "$available" "$escaped_trigger" "$ts"
+      ;;
+    *)
+      wf_die "unsupported check disk format: $format"
+      ;;
+  esac
+}
+
+if $once; then
+  emit_check ""
+else
+  while IFS= read -r trigger; do
+    emit_check "$trigger"
+  done
+fi

@@ -1,0 +1,46 @@
+#!/usr/bin/env bash
+#MISE description="Stop a named background workflow"
+set -euo pipefail
+
+source "$MISE_CONFIG_ROOT/lib/wf.bash"
+
+usage() {
+  cat <<'USAGE'
+Usage: wf run stop NAME
+USAGE
+}
+
+if [ "${1:-}" = "-h" ] || [ "${1:-}" = "--help" ]; then
+  usage
+  exit 0
+fi
+
+[ "$#" -eq 1 ] || wf_die "usage: wf run stop NAME"
+name="$1"
+wf_validate_run_name "$name"
+run_dir="$(wf_run_home)/$name"
+pid_file="$run_dir/pid"
+
+[ -f "$pid_file" ] || wf_die "unknown run: $name"
+pid="$(cat "$pid_file")"
+
+if ! wf_is_pid_running "$pid"; then
+  printf '%s already stopped pid=%s\n' "$name" "$pid"
+  exit 0
+fi
+
+if ! kill "$pid" >/dev/null 2>&1; then
+  printf 'warning: failed to send TERM to pid=%s\n' "$pid" >&2
+fi
+for _ in 1 2 3 4 5; do
+  if ! wf_is_pid_running "$pid"; then
+    printf '%s stopped pid=%s\n' "$name" "$pid"
+    exit 0
+  fi
+  sleep 1
+done
+
+if ! kill -KILL "$pid" >/dev/null 2>&1; then
+  printf 'warning: failed to send KILL to pid=%s\n' "$pid" >&2
+fi
+printf '%s killed pid=%s\n' "$name" "$pid"

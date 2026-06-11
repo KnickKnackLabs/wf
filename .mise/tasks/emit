@@ -1,0 +1,25 @@
+#!/usr/bin/env bash
+#MISE description="Emit arguments as line records, or pass stdin through"
+set -euo pipefail
+
+usage() {
+  cat <<'USAGE'
+Usage: wf emit [LINE ...]
+
+With arguments, each argument is emitted as one line. With no arguments, stdin is
+passed through unchanged.
+USAGE
+}
+
+if [ "${1:-}" = "-h" ] || [ "${1:-}" = "--help" ]; then
+  usage
+  exit 0
+fi
+
+if [ "$#" -eq 0 ]; then
+  cat
+else
+  for line in "$@"; do
+    printf '%s\n' "$line"
+  done
+fi

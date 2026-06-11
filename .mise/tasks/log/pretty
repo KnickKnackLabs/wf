@@ -1,0 +1,36 @@
+#!/usr/bin/env bash
+#MISE description="Print line records with timestamps for humans"
+set -euo pipefail
+
+source "$MISE_CONFIG_ROOT/lib/wf.bash"
+
+usage() {
+  cat <<'USAGE'
+Usage: wf log pretty [--no-ts]
+USAGE
+}
+
+show_ts=true
+while [ "$#" -gt 0 ]; do
+  case "$1" in
+    -h|--help)
+      usage
+      exit 0
+      ;;
+    --no-ts)
+      show_ts=false
+      shift
+      ;;
+    *)
+      wf_die "unexpected argument: $1"
+      ;;
+  esac
+done
+
+while IFS= read -r line; do
+  if $show_ts; then
+    printf '[%s] %s\n' "$(wf_now_utc)" "$line"
+  else
+    printf '%s\n' "$line"
+  fi
+done

@@ -1,0 +1,56 @@
+#!/usr/bin/env bash
+#MISE description="Route text lines through then/else commands using a regex"
+set -euo pipefail
+
+source "$MISE_CONFIG_ROOT/lib/wf.bash"
+
+usage() {
+  cat <<'USAGE'
+Usage: wf text if REGEX --then COMMAND [--else COMMAND]
+
+Lines matching REGEX go to COMMAND from --then. Non-matching lines go to
+--else when provided, otherwise they are dropped.
+USAGE
+}
+
+pattern=""
+then_command=""
+else_command=""
+
+while [ "$#" -gt 0 ]; do
+  case "$1" in
+    -h|--help)
+      usage
+      exit 0
+      ;;
+    -t|--then)
+      [ "$#" -ge 2 ] || wf_die "--then requires a command"
+      then_command="$2"
+      shift 2
+      ;;
+    -e|--else)
+      [ "$#" -ge 2 ] || wf_die "--else requires a command"
+      else_command="$2"
+      shift 2
+      ;;
+    *)
+      if [ -z "$pattern" ]; then
+        pattern="$1"
+        shift
+      else
+        wf_die "unexpected argument: $1"
+      fi
+      ;;
+  esac
+done
+
+[ -n "$pattern" ] || wf_die "missing REGEX"
+[ -n "$then_command" ] || wf_die "missing --then COMMAND"
+
+while IFS= read -r line; do
+  if [[ "$line" =~ $pattern ]]; then
+    wf_run_line_command "$then_command" "$line"
+  elif [ -n "$else_command" ]; then
+    wf_run_line_command "$else_command" "$line"
+  fi
+done

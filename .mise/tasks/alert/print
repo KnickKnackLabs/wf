@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+#MISE description="Print alerts using an optional {} line template"
+set -euo pipefail
+
+usage() {
+  cat <<'USAGE'
+Usage: wf alert print [TEMPLATE]
+
+If TEMPLATE is provided, every {} is replaced with the input line. Without a
+template, input is printed unchanged.
+USAGE
+}
+
+if [ "${1:-}" = "-h" ] || [ "${1:-}" = "--help" ]; then
+  usage
+  exit 0
+fi
+
+template="$*"
+
+while IFS= read -r line; do
+  if [ -n "$template" ]; then
+    printf '%s\n' "${template//\{\}/$line}"
+  else
+    printf '%s\n' "$line"
+  fi
+done

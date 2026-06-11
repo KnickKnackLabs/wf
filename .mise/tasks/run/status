@@ -1,0 +1,37 @@
+#!/usr/bin/env bash
+#MISE description="Show status for a named background workflow"
+set -euo pipefail
+
+source "$MISE_CONFIG_ROOT/lib/wf.bash"
+
+usage() {
+  cat <<'USAGE'
+Usage: wf run status NAME
+USAGE
+}
+
+if [ "${1:-}" = "-h" ] || [ "${1:-}" = "--help" ]; then
+  usage
+  exit 0
+fi
+
+[ "$#" -eq 1 ] || wf_die "usage: wf run status NAME"
+name="$1"
+wf_validate_run_name "$name"
+run_dir="$(wf_run_home)/$name"
+pid_file="$run_dir/pid"
+
+if [ ! -f "$pid_file" ]; then
+  printf '%s stopped\n' "$name"
+  exit 1
+fi
+
+pid="$(cat "$pid_file")"
+if wf_is_pid_running "$pid"; then
+  started="unknown"
+  [ -f "$run_dir/started_at" ] && started="$(cat "$run_dir/started_at")"
+  printf '%s running pid=%s started_at=%s\n' "$name" "$pid" "$started"
+else
+  printf '%s stopped pid=%s\n' "$name" "$pid"
+  exit 1
+fi

@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+#MISE description="Run a side-effect command on a copy of stdin while passing stdin through"
+set -euo pipefail
+
+source "$MISE_CONFIG_ROOT/lib/wf.bash"
+
+usage() {
+  cat <<'USAGE'
+Usage: wf tap COMMAND
+
+COMMAND receives a copy of stdin. Its stdout is redirected to stderr so the main
+pipeline remains unchanged.
+USAGE
+}
+
+if [ "${1:-}" = "-h" ] || [ "${1:-}" = "--help" ]; then
+  usage
+  exit 0
+fi
+
+[ "$#" -eq 1 ] || wf_die "usage: wf tap COMMAND"
+command_string="$1"
+
+tee >(bash -lc "$command_string" >&2) >/dev/stdout

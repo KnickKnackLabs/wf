@@ -1,0 +1,29 @@
+#!/usr/bin/env bash
+#MISE description="Take the first N line records"
+set -euo pipefail
+
+source "$MISE_CONFIG_ROOT/lib/wf.bash"
+
+usage() {
+  cat <<'USAGE'
+Usage: wf flow take N
+USAGE
+}
+
+if [ "${1:-}" = "-h" ] || [ "${1:-}" = "--help" ]; then
+  usage
+  exit 0
+fi
+
+[ "$#" -eq 1 ] || wf_die "usage: wf flow take N"
+limit="$1"
+[[ "$limit" =~ ^[0-9]+$ ]] || wf_die "N must be a non-negative integer"
+
+seen=0
+while IFS= read -r line; do
+  if [ "$seen" -ge "$limit" ]; then
+    break
+  fi
+  printf '%s\n' "$line"
+  seen=$((seen + 1))
+done

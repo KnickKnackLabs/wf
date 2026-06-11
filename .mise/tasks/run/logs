@@ -1,0 +1,76 @@
+#!/usr/bin/env bash
+#MISE description="Print logs for a named background workflow"
+set -euo pipefail
+
+source "$MISE_CONFIG_ROOT/lib/wf.bash"
+
+usage() {
+  cat <<'USAGE'
+Usage: wf run logs [-f] [--stderr|--stdout|--both] NAME
+USAGE
+}
+
+follow=false
+stream="both"
+name=""
+
+while [ "$#" -gt 0 ]; do
+  case "$1" in
+    -h|--help)
+      usage
+      exit 0
+      ;;
+    -f|--follow)
+      follow=true
+      shift
+      ;;
+    --stderr)
+      stream="stderr"
+      shift
+      ;;
+    --stdout)
+      stream="stdout"
+      shift
+      ;;
+    --both)
+      stream="both"
+      shift
+      ;;
+    *)
+      if [ -z "$name" ]; then
+        name="$1"
+        shift
+      else
+        wf_die "unexpected argument: $1"
+      fi
+      ;;
+  esac
+done
+
+[ -n "$name" ] || wf_die "usage: wf run logs [-f] NAME"
+wf_validate_run_name "$name"
+run_dir="$(wf_run_home)/$name"
+[ -d "$run_dir" ] || wf_die "unknown run: $name"
+
+case "$stream" in
+  stdout)
+    files=("$run_dir/stdout.log")
+    ;;
+  stderr)
+    files=("$run_dir/stderr.log")
+    ;;
+  both)
+    files=("$run_dir/stdout.log" "$run_dir/stderr.log")
+    ;;
+  *)
+    wf_die "unknown stream: $stream"
+    ;;
+esac
+
+if $follow; then
+  tail -f "${files[@]}"
+else
+  for file in "${files[@]}"; do
+    [ -f "$file" ] && cat "$file"
+  done
+fi

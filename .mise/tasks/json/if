@@ -1,0 +1,57 @@
+#!/usr/bin/env bash
+#MISE description="Route JSONL records through then/else commands using a jq predicate"
+set -euo pipefail
+
+source "$MISE_CONFIG_ROOT/lib/wf.bash"
+wf_require_command jq
+
+usage() {
+  cat <<'USAGE'
+Usage: wf json if JQ_FILTER --then COMMAND [--else COMMAND]
+
+Records where jq -e JQ_FILTER succeeds go to --then. Others go to --else when
+provided, otherwise they are dropped.
+USAGE
+}
+
+filter=""
+then_command=""
+else_command=""
+
+while [ "$#" -gt 0 ]; do
+  case "$1" in
+    -h|--help)
+      usage
+      exit 0
+      ;;
+    -t|--then)
+      [ "$#" -ge 2 ] || wf_die "--then requires a command"
+      then_command="$2"
+      shift 2
+      ;;
+    -e|--else)
+      [ "$#" -ge 2 ] || wf_die "--else requires a command"
+      else_command="$2"
+      shift 2
+      ;;
+    *)
+      if [ -z "$filter" ]; then
+        filter="$1"
+        shift
+      else
+        wf_die "unexpected argument: $1"
+      fi
+      ;;
+  esac
+done
+
+[ -n "$filter" ] || wf_die "missing JQ_FILTER"
+[ -n "$then_command" ] || wf_die "missing --then COMMAND"
+
+while IFS= read -r json; do
+  if jq -e "$filter" >/dev/null <<< "$json"; then
+    wf_run_line_command "$then_command" "$json"
+  elif [ -n "$else_command" ]; then
+    wf_run_line_command "$else_command" "$json"
+  fi
+done

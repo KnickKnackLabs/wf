@@ -1,0 +1,82 @@
+#!/usr/bin/env bash
+#MISE description="Broadcast line records to multiple branch commands"
+set -euo pipefail
+
+source "$MISE_CONFIG_ROOT/lib/wf.bash"
+
+usage() {
+  cat <<'USAGE'
+Usage: wf fanout tee [--pass] COMMAND...
+
+Each COMMAND receives the full input stream. Branch stdout/stderr are inherited.
+By default the original stream is not forwarded by this node. Use --pass to also
+print the original input lines.
+USAGE
+}
+
+pass=false
+commands=()
+
+while [ "$#" -gt 0 ]; do
+  case "$1" in
+    -h|--help)
+      usage
+      exit 0
+      ;;
+    --pass)
+      pass=true
+      shift
+      ;;
+    *)
+      commands+=("$1")
+      shift
+      ;;
+  esac
+done
+
+[ "${#commands[@]}" -gt 0 ] || wf_die "usage: wf fanout tee [--pass] COMMAND..."
+
+tmp_dir="$(mktemp -d)"
+# shellcheck disable=SC2329 # invoked by the EXIT trap below
+cleanup() {
+  rm -rf "$tmp_dir"
+}
+trap cleanup EXIT
+
+pids=()
+fds=()
+
+for index in "${!commands[@]}"; do
+  fifo="$tmp_dir/branch-$index"
+  mkfifo "$fifo"
+  bash -lc "${commands[$index]}" < "$fifo" &
+  pids+=("$!")
+done
+
+for index in "${!commands[@]}"; do
+  fifo="$tmp_dir/branch-$index"
+  exec {fd}>"$fifo"
+  fds+=("$fd")
+done
+
+while IFS= read -r line; do
+  for fd in "${fds[@]}"; do
+    printf '%s\n' "$line" >&"$fd"
+  done
+  if $pass; then
+    printf '%s\n' "$line"
+  fi
+done
+
+for fd in "${fds[@]}"; do
+  exec {fd}>&-
+done
+
+status=0
+for pid in "${pids[@]}"; do
+  if ! wait "$pid"; then
+    status=1
+  fi
+done
+
+exit "$status"

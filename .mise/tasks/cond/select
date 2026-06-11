@@ -1,0 +1,52 @@
+#!/usr/bin/env bash
+#MISE description="Keep line records whose predicate command exits successfully"
+set -euo pipefail
+
+source "$MISE_CONFIG_ROOT/lib/wf.bash"
+
+usage() {
+  cat <<'USAGE'
+Usage: wf cond select [--invert] COMMAND
+
+COMMAND receives each line on stdin and in $WF_RECORD. Records are printed when
+COMMAND exits 0. Use --invert to print records when COMMAND exits non-zero.
+USAGE
+}
+
+invert=false
+predicate=""
+
+while [ "$#" -gt 0 ]; do
+  case "$1" in
+    -h|--help)
+      usage
+      exit 0
+      ;;
+    --invert|-v)
+      invert=true
+      shift
+      ;;
+    *)
+      if [ -z "$predicate" ]; then
+        predicate="$1"
+        shift
+      else
+        wf_die "unexpected argument: $1"
+      fi
+      ;;
+  esac
+done
+
+[ -n "$predicate" ] || wf_die "missing predicate COMMAND"
+
+while IFS= read -r record; do
+  if wf_test_line_command "$predicate" "$record"; then
+    matched=true
+  else
+    matched=false
+  fi
+
+  if { $matched && ! $invert; } || { ! $matched && $invert; }; then
+    printf '%s\n' "$record"
+  fi
+done

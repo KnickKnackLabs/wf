@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+#MISE description="Drop line records whose predicate command exits successfully"
+set -euo pipefail
+
+source "$MISE_CONFIG_ROOT/lib/wf.bash"
+
+usage() {
+  cat <<'USAGE'
+Usage: wf cond reject COMMAND
+
+COMMAND receives each line on stdin and in $WF_RECORD. Records are printed when
+COMMAND exits non-zero.
+USAGE
+}
+
+if [ "${1:-}" = "-h" ] || [ "${1:-}" = "--help" ]; then
+  usage
+  exit 0
+fi
+
+[ "$#" -eq 1 ] || wf_die "usage: wf cond reject COMMAND"
+predicate="$1"
+
+while IFS= read -r record; do
+  if ! wf_test_line_command "$predicate" "$record"; then
+    printf '%s\n' "$record"
+  fi
+done

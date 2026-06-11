@@ -1,0 +1,97 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+wf_root="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd -P)"
+task_root="$wf_root/.mise/tasks"
+
+usage() {
+  cat <<'USAGE'
+wf - small shell workflow primitives
+
+Usage:
+  wf TASK [SUBTASK ...] [args]
+  wf help
+
+Examples:
+  wf tick --count 5 every 1s
+  wf tick --count 5 every 0s | wf text if '^[02468]$' --then 'sed s/^/even:/' --else 'sed s/^/odd:/'
+  wf run start demo -- 'wf tick --count 3 every 1s | wf log pretty'
+
+Tasks are mise task scripts under .mise/tasks. Nested tasks use spaces:
+  .mise/tasks/cond/if  ->  wf cond if
+USAGE
+}
+
+if [ "$#" -eq 0 ] || [ "${1:-}" = "-h" ] || [ "${1:-}" = "--help" ]; then
+  usage
+  exit 0
+fi
+
+if [ "${1:-}" = "help" ]; then
+  shift
+  if [ "$#" -eq 0 ]; then
+    usage
+    echo
+    echo "Available tasks:"
+    find "$task_root" -type f -perm -u+x | while IFS= read -r task_file; do
+      rel="${task_file#"$task_root/"}"
+      task="${rel//\// }"
+      desc=""
+      if desc_line="$(grep -E '^#MISE description=' "$task_file")"; then
+        desc="${desc_line#\#MISE description=\"}"
+        desc="${desc%\"}"
+      fi
+      if [ -n "$desc" ]; then
+        printf '  %-22s %s\n' "$task" "$desc"
+      else
+        printf '  %s\n' "$task"
+      fi
+    done | sort
+    exit 0
+  fi
+fi
+
+match_count=0
+match_task=""
+current="$task_root"
+index=0
+
+for arg in "$@"; do
+  index=$((index + 1))
+  candidate="$current/$arg"
+
+  if [ -f "$candidate" ] && [ -x "$candidate" ]; then
+    rel="${candidate#"$task_root/"}"
+    match_task="${rel//\//:}"
+    match_count="$index"
+  fi
+
+  if [ -d "$candidate" ]; then
+    current="$candidate"
+  else
+    break
+  fi
+done
+
+if [ "$match_count" -eq 0 ]; then
+  printf 'wf: unknown task:' >&2
+  for arg in "$@"; do
+    printf ' %s' "$arg" >&2
+  done
+  printf '\n\n' >&2
+  usage >&2
+  exit 2
+fi
+
+rest=("$@")
+for ((i = 0; i < match_count; i++)); do
+  unset 'rest[i]'
+done
+rest=("${rest[@]}")
+
+export WF_ROOT="$wf_root"
+export WF_CALLER_PWD="${WF_CALLER_PWD:-$PWD}"
+export PATH="$wf_root/bin:$PATH"
+
+cd "$wf_root"
+exec mise run -q "$match_task" -- "${rest[@]}"

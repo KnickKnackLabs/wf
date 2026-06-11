@@ -1,0 +1,29 @@
+#!/usr/bin/env bash
+#MISE description="Forward line records at most once per duration"
+set -euo pipefail
+
+source "$MISE_CONFIG_ROOT/lib/wf.bash"
+
+usage() {
+  cat <<'USAGE'
+Usage: wf flow throttle DURATION
+USAGE
+}
+
+if [ "${1:-}" = "-h" ] || [ "${1:-}" = "--help" ]; then
+  usage
+  exit 0
+fi
+
+[ "$#" -ge 1 ] || wf_die "usage: wf flow throttle DURATION"
+interval="$(wf_parse_duration "$*")"
+first=true
+
+while IFS= read -r line; do
+  if $first; then
+    first=false
+  else
+    sleep "$interval"
+  fi
+  printf '%s\n' "$line"
+done

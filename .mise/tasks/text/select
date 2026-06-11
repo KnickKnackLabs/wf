@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+#MISE description="Keep text lines matching a Bash regular expression"
+set -euo pipefail
+
+source "$MISE_CONFIG_ROOT/lib/wf.bash"
+
+usage() {
+  cat <<'USAGE'
+Usage: wf text select REGEX
+
+Keeps lines where [[ $line =~ REGEX ]] is true.
+USAGE
+}
+
+if [ "${1:-}" = "-h" ] || [ "${1:-}" = "--help" ]; then
+  usage
+  exit 0
+fi
+
+[ "$#" -eq 1 ] || wf_die "usage: wf text select REGEX"
+pattern="$1"
+
+while IFS= read -r line; do
+  if [[ "$line" =~ $pattern ]]; then
+    printf '%s\n' "$line"
+  fi
+done

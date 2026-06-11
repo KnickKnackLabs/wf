@@ -1,0 +1,69 @@
+#!/usr/bin/env bash
+#MISE description="Start a named workflow in the background"
+set -euo pipefail
+
+source "$MISE_CONFIG_ROOT/lib/wf.bash"
+
+usage() {
+  cat <<'USAGE'
+Usage: wf run start NAME -- WORKFLOW
+
+WORKFLOW is a shell snippet. Logs and pid files live under:
+  ${XDG_STATE_HOME:-~/.local/state}/wf/runs/NAME/
+
+Example:
+  wf run start demo -- 'wf tick --count 3 every 1s | wf log pretty'
+USAGE
+}
+
+if [ "${1:-}" = "-h" ] || [ "${1:-}" = "--help" ]; then
+  usage
+  exit 0
+fi
+
+[ "$#" -ge 2 ] || wf_die "usage: wf run start NAME -- WORKFLOW"
+name="$1"
+shift
+wf_validate_run_name "$name"
+
+if [ "${1:-}" = "--" ]; then
+  shift
+fi
+[ "$#" -gt 0 ] || wf_die "missing WORKFLOW"
+workflow="$*"
+
+run_dir="$(wf_run_home)/$name"
+pid_file="$run_dir/pid"
+stdout_log="$run_dir/stdout.log"
+stderr_log="$run_dir/stderr.log"
+workflow_file="$run_dir/workflow.sh"
+
+mkdir -p "$run_dir"
+
+if [ -f "$pid_file" ]; then
+  old_pid="$(cat "$pid_file")"
+  if wf_is_pid_running "$old_pid"; then
+    wf_die "run '$name' is already running as pid $old_pid"
+  fi
+fi
+
+cat > "$workflow_file" <<EOF
+#!/usr/bin/env bash
+set -euo pipefail
+export PATH="$MISE_CONFIG_ROOT/bin:\$PATH"
+export WF_ROOT="$MISE_CONFIG_ROOT"
+export WF_CALLER_PWD="${WF_CALLER_PWD:-$PWD}"
+cd "${WF_CALLER_PWD:-$PWD}"
+$workflow
+EOF
+chmod +x "$workflow_file"
+: > "$stdout_log"
+: > "$stderr_log"
+
+nohup bash "$workflow_file" > "$stdout_log" 2> "$stderr_log" < /dev/null &
+pid="$!"
+printf '%s\n' "$pid" > "$pid_file"
+printf '%s\n' "$workflow" > "$run_dir/workflow.txt"
+printf '%s\n' "$(wf_now_utc)" > "$run_dir/started_at"
+
+printf 'started %s pid=%s\n' "$name" "$pid"

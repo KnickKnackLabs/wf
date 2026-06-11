@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+#MISE description="Sleep before forwarding each line record"
+set -euo pipefail
+
+source "$MISE_CONFIG_ROOT/lib/wf.bash"
+
+usage() {
+  cat <<'USAGE'
+Usage: wf flow delay DURATION
+USAGE
+}
+
+if [ "${1:-}" = "-h" ] || [ "${1:-}" = "--help" ]; then
+  usage
+  exit 0
+fi
+
+[ "$#" -ge 1 ] || wf_die "usage: wf flow delay DURATION"
+interval="$(wf_parse_duration "$*")"
+
+while IFS= read -r line; do
+  sleep "$interval"
+  printf '%s\n' "$line"
+done

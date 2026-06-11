@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+#MISE description="Drop JSONL records matching a jq predicate"
+set -euo pipefail
+
+source "$MISE_CONFIG_ROOT/lib/wf.bash"
+wf_require_command jq
+
+usage() {
+  cat <<'USAGE'
+Usage: wf json reject JQ_FILTER
+
+Drops each JSON line when jq -e JQ_FILTER exits successfully.
+USAGE
+}
+
+if [ "${1:-}" = "-h" ] || [ "${1:-}" = "--help" ]; then
+  usage
+  exit 0
+fi
+
+[ "$#" -eq 1 ] || wf_die "usage: wf json reject JQ_FILTER"
+filter="$1"
+
+while IFS= read -r json; do
+  if ! jq -e "$filter" >/dev/null <<< "$json"; then
+    printf '%s\n' "$json"
+  fi
+done
