@@ -56,12 +56,13 @@ done
 
 for index in "${!commands[@]}"; do
   fifo="$tmp_dir/branch-$index"
-  exec {fd}>"$fifo"
+  fd=$((index + 10))
+  eval "exec $fd>\"\$fifo\""
   fds+=("$fd")
 done
 
 while IFS= read -r line || [ -n "$line" ]; do
-  for fd in "${fds[@]}"; do
+  for fd in ${fds[@]+"${fds[@]}"}; do
     printf '%s\n' "$line" >&"$fd"
   done
   if $pass; then
@@ -69,12 +70,12 @@ while IFS= read -r line || [ -n "$line" ]; do
   fi
 done
 
-for fd in "${fds[@]}"; do
-  exec {fd}>&-
+for fd in ${fds[@]+"${fds[@]}"}; do
+  eval "exec $fd>&-"
 done
 
 status=0
-for pid in "${pids[@]}"; do
+for pid in ${pids[@]+"${pids[@]}"}; do
   if ! wait "$pid"; then
     status=1
   fi

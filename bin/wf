@@ -89,9 +89,9 @@ rest=("$@")
 for ((i = 0; i < match_count; i++)); do
   unset 'rest[i]'
 done
-rest=("${rest[@]}")
+rest=(${rest[@]+"${rest[@]}"})
 if $help_requested; then
-  rest=("--help" "${rest[@]}")
+  rest=("--help" ${rest[@]+"${rest[@]}"})
 fi
 
 export WF_ROOT="$wf_root"
@@ -99,4 +99,4 @@ export WF_CALLER_PWD="${WF_CALLER_PWD:-$PWD}"
 export PATH="$wf_root/bin:$PATH"
 
 cd "$wf_root"
-exec mise run -q "$match_task" -- "${rest[@]}"
+exec mise run -q "$match_task" -- ${rest[@]+"${rest[@]}"}

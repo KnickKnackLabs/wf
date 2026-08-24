@@ -34,7 +34,8 @@ mkfifo "$fifo"
 bash -lc "$command_string" < "$fifo" >&2 &
 pid="$!"
 
-exec {fd}>"$fifo"
+fd=10
+eval "exec $fd>\"\$fifo\""
 status=0
 
 while IFS= read -r line || [ -n "$line" ]; do
@@ -45,7 +46,7 @@ while IFS= read -r line || [ -n "$line" ]; do
   fi
 done
 
-exec {fd}>&-
+eval "exec $fd>&-"
 if ! wait "$pid"; then
   status=1
 fi

@@ -158,15 +158,23 @@ wf run stop demo
 `wf` currently asks [codebase](https://github.com/KnickKnackLabs/codebase) to run these lint rules:
 
 ```
+shellcheck
+or-true
+bash-empty-argv-forwarding
+bash-empty-array-expansions
+exec-stderr-persistence
+gum-table
 mise-settings
+mise-usage-examples
+variadic-args
+mcr-scope
 bats-test-helper
 bats-test-task
-mcr-scope
-or-true
-shellcheck
-gum-table
-caller-pwd-contract
+bats-public-task-path
 github-actions
+ci-lint-enforcement
+caller-pwd-contract
+mise-shiv-plugin
 ```
 
 </details>
