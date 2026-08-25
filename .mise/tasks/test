@@ -118,6 +118,24 @@ select_parallelism() {
   fi
 }
 
+apply_parallel_transport_fallback() {
+  local argument
+  local needs_across_file_fallback=false
+  local has_across_file_fallback=false
+
+  [ "$effective_jobs" -gt 1 ] || return 0
+
+  [[ "$MISE_CONFIG_ROOT" =~ [[:space:]] ]] && needs_across_file_fallback=true
+  for argument in ${resolved_arguments[@]+"${resolved_arguments[@]}"}; do
+    [[ "$argument" =~ [[:space:]] ]] && needs_across_file_fallback=true
+    [ "$argument" = --no-parallelize-across-files ] && has_across_file_fallback=true
+  done
+
+  if $needs_across_file_fallback && ! $has_across_file_fallback; then
+    resolved_arguments=(--no-parallelize-across-files ${resolved_arguments[@]+"${resolved_arguments[@]}"})
+  fi
+}
+
 require_commands() {
   if ! command_available "$bats_command"; then
     printf "Error: BATS executable '%s' is unavailable; run 'mise install'.\n" \
@@ -160,5 +178,6 @@ fi
 
 resolve_arguments ${arguments[@]+"${arguments[@]}"}
 select_parallelism
+apply_parallel_transport_fallback
 require_commands
 run_bats
