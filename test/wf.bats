@@ -248,7 +248,7 @@ BASH
 }
 
 @test "doctor reports optional pre-commit hook state" {
-  run bash -c 'cd "$REPO_DIR" && mise run -q doctor'
+  run wf doctor
   [ "$status" -eq 0 ]
   [[ "$output" == *"pre-commit"* ]]
 }

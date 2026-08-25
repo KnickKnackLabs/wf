@@ -7,7 +7,7 @@
 Route, branch, fan out, log, and supervise Unix pipelines without forcing a data format.
 
 ![shape: mise tasks + Bash](https://img.shields.io/badge/shape-mise%20tasks%20%2B%20Bash-4EAA25?style=flat&logo=gnubash&logoColor=white)
-[![tests: 23](https://img.shields.io/badge/tests-23-brightgreen?style=flat)](test/)
+[![tests: 27](https://img.shields.io/badge/tests-27-brightgreen?style=flat)](test/)
 [![tasks: 31](https://img.shields.io/badge/tasks-31-blue?style=flat)](.mise/tasks/)
 ![README: TSX](https://img.shields.io/badge/README-TSX-f472b6?style=flat)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue?style=flat)](LICENSE)
@@ -158,15 +158,23 @@ wf run stop demo
 `wf` currently asks [codebase](https://github.com/KnickKnackLabs/codebase) to run these lint rules:
 
 ```
+shellcheck
+or-true
+bash-empty-argv-forwarding
+bash-empty-array-expansions
+exec-stderr-persistence
+gum-table
 mise-settings
+mise-usage-examples
+variadic-args
+mcr-scope
 bats-test-helper
 bats-test-task
-mcr-scope
-or-true
-shellcheck
-gum-table
-caller-pwd-contract
+bats-public-task-path
 github-actions
+ci-lint-enforcement
+caller-pwd-contract
+mise-shiv-plugin
 ```
 
 </details>
@@ -180,7 +188,7 @@ readme build --check
 git diff --check
 ```
 
-The suite currently has **23 tests**, **31 executable tasks**, and CI runs on **ubuntu-latest + macos-latest**.
+The suite currently has **27 tests**, **31 executable tasks**, and CI runs on **ubuntu-latest + macos-latest**.
 
 <div align="center">
 

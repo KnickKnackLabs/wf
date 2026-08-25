@@ -44,7 +44,7 @@ pids=()
 terminate() {
   local pid
 
-  for pid in "${pids[@]}"; do
+  for pid in ${pids[@]+"${pids[@]}"}; do
     if ! kill "$pid" >/dev/null 2>&1; then
       continue
     fi
@@ -53,13 +53,13 @@ terminate() {
 
 trap 'terminate; exit 130' INT TERM
 
-for command_string in "${commands[@]}"; do
+for command_string in ${commands[@]+"${commands[@]}"}; do
   bash -lc "$command_string" &
   pids+=("$!")
 done
 
 status=0
-for pid in "${pids[@]}"; do
+for pid in ${pids[@]+"${pids[@]}"}; do
   if ! wait "$pid"; then
     status=1
   fi

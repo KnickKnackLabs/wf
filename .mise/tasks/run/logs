@@ -69,9 +69,9 @@ case "$stream" in
 esac
 
 if $follow; then
-  tail -f "${files[@]}"
+  tail -f ${files[@]+"${files[@]}"}
 else
-  for file in "${files[@]}"; do
+  for file in ${files[@]+"${files[@]}"}; do
     [ -f "$file" ] && cat "$file"
   done
 fi
