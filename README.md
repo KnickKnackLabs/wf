@@ -7,7 +7,7 @@
 Route, branch, fan out, log, and supervise Unix pipelines without forcing a data format.
 
 ![shape: mise tasks + Bash](https://img.shields.io/badge/shape-mise%20tasks%20%2B%20Bash-4EAA25?style=flat&logo=gnubash&logoColor=white)
-[![tests: 27](https://img.shields.io/badge/tests-27-brightgreen?style=flat)](test/)
+[![tests: 29](https://img.shields.io/badge/tests-29-brightgreen?style=flat)](test/)
 [![tasks: 31](https://img.shields.io/badge/tasks-31-blue?style=flat)](.mise/tasks/)
 ![README: TSX](https://img.shields.io/badge/README-TSX-f472b6?style=flat)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue?style=flat)](LICENSE)
@@ -188,7 +188,7 @@ readme build --check
 git diff --check
 ```
 
-The suite currently has **27 tests**, **31 executable tasks**, and CI runs on **ubuntu-latest + macos-latest**.
+The suite currently has **29 tests**, **31 executable tasks**, and CI runs on **ubuntu-latest + macos-latest**.
 
 <div align="center">
 
